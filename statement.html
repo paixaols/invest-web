@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Invest - Monitor de investimentos</title>
+    <link rel="stylesheet" href="assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="assets/css/dashboard.css">
+</head>
+<body>
+    <!-- Header -->
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="https://investe.herokuapp.com/" target="_blank" rel="noopener noreferrer">Versão antiga</a>
+            </div>
+            <div id="navbar" class="navbar-collapse collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li><a href="index.html">Painel</a></li>
+                    <li><a href="statement.html">Extrato</a></li>
+                    <li><a href="#">Ativos</a></li>
+                    <li><a href="#">Sair</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-sm-3 col-md-2 sidebar">
+                <button type="button" class="btn btn-default" id="btn-apply-filters">Aplicar filtros</button>
+
+                <hr>
+
+                <h4>Instituição</h4>
+                <!-- https://getbootstrap.com/docs/5.0/forms/select/ -->
+                <div class="dropdown">
+                    <button class="btn btn-default dropdown-toggle" type="button" id="dropdown-menu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                        - Selecione -
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="dropdown-menu1"></ul>
+                </div>
+
+                <hr>
+
+                <h4>Evento</h4>
+                <div class="dropdown">
+                    <button class="btn btn-default dropdown-toggle" type="button" id="dropdown-menu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                        - Selecione -
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="dropdown-menu1"></ul>
+                </div>
+
+                <hr>
+
+                <h4>Ativo</h4>
+                <div class="dropdown">
+                    <button class="btn btn-default dropdown-toggle" type="button" id="dropdown-menu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                        - Selecione -
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="dropdown-menu1"></ul>
+                </div>
+            </div>
+
+            <!-- Main content -->
+            <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+                <h1 class="page-header">Extrato</h1>
+
+                <p id="asd"></p>
+                <div class="table-responsive table-fix-head">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Data</th>
+                                <th>Instituição</th>
+                                <th>Evento</th>
+                                <th>Ativo</th>
+                                <th>Quantidade</th>
+                                <th>Valor</th>
+                                <th>Taxas</th>
+                            </tr>
+                        </thead>
+                        <tbody id="statement-table-body">
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js" integrity="sha384-nvAa0+6Qg9clwYCGGPpDQLVpLNn0fRaROjHqs13t4Ggj3Ez50XnGQqc/r8MhnRDZ" crossorigin="anonymous"></script>
+
+    <!-- Bootstrap -->
+    <script src="assets/js/bootstrap.min.js"></script>
+
+    <script src="assets/js/statement.js"></script>
+</body>
+</html>

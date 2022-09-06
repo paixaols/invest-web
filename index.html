@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Invest - Monitor de investimentos</title>
+    <link rel="stylesheet" href="assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="assets/css/dashboard.css">
+</head>
+<body>
+
+    <!-- Header -->
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="https://investe.herokuapp.com/" target="_blank" rel="noopener noreferrer">Versão antiga</a>
+            </div>
+            <div id="navbar" class="navbar-collapse collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li><a href="index.html">Painel</a></li>
+                    <li><a href="statement.html">Extrato</a></li>
+                    <li><a href="#">Ativos</a></li>
+                    <li><a href="#">Sair</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-sm-3 col-md-2 sidebar">
+                <button type="button" class="btn btn-default" id="btn-apply-filters">Aplicar filtros</button>
+
+                <hr>
+
+                <h4>Período</h4>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="timeFilter" id="timeFilter1" value="1">
+                    <label class="form-check-label" for="timeFilter1">No ano</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="timeFilter" id="timeFilter2" value="2">
+                    <label class="form-check-label" for="timeFilter2">6 meses</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="timeFilter" id="timeFilter3" value="3" checked>
+                    <label class="form-check-label" for="timeFilter3">12 meses</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="timeFilter" id="timeFilter4" value="4">
+                    <label class="form-check-label" for="timeFilter4">5 anos</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="timeFilter" id="timeFilter5" value="5">
+                    <label class="form-check-label" for="timeFilter5">Máximo</label>
+                </div>
+
+                <hr>
+
+                <h4>Local</h4>
+                <div id="market-filter-wrapper"></div>
+                <!-- <button type="button" class="btn btn-default" id="btn-apply-market-filter">Aplicar</button> -->
+
+                <hr>
+
+                <h4>Classe de investimento</h4>
+                <div id="class-filter-wrapper"></div>
+                <!-- <button type="button" class="btn btn-default" id="btn-apply-class-filter">Aplicar</button> -->
+            </div>
+
+            <!-- Main content -->
+            <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+                <h1 class="page-header">Painel</h1>
+
+                <!-- Nav tabs -->
+                <div>
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li role="presentation" class="active"><a href="#home" aria-controls="home" role="tab" data-toggle="tab">Visão geral</a></li>
+                        <li role="presentation"><a href="#fixed-income" aria-controls="fixed-income" role="tab" data-toggle="tab">Renda fixa</a></li>
+                        <li role="presentation"><a href="#variable-income" aria-controls="variable-income" role="tab" data-toggle="tab">Renda variável</a></li>
+                        <li role="presentation"><a href="#cripto" aria-controls="cripto" role="tab" data-toggle="tab">Cripto</a></li>
+                    </ul>
+                </div>
+
+                <!-- Tab panes -->
+                <div class="tab-content">
+                    <!-- Visão geral -->
+                    <div role="tabpanel" class="tab-pane active" id="home">
+                        <!-- Histórico -->
+                        <h2 class="sub-header">Histórico</h2>
+                        <span id="return" class="text-muted"></span>
+                        <div class="container-fluid">
+                            <div class="row">
+                                <div class="col-md-5" id="chart-overview1-wrapper">
+                                    <canvas id="chart-overview1" width="40" height="40"></canvas>
+                                </div>
+                                <div class="col-md-5" id="chart-overview2-wrapper">
+                                    <canvas id="chart-overview2" width="40" height="40"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Carteira atual -->
+                        <h2 class="sub-header">Carteira atual</h2>
+                        <span id="current-date" class="text-muted"></span>
+
+                        <div class="container-fluid">
+                            <div class="row">
+                                <div class="col-md-5" id="chart-overview3-wrapper">
+                                    <canvas id="chart-overview3" width="40" height="40"></canvas>
+                                </div>
+                                <div class="col-md-5" id="chart-overview4-wrapper">
+                                    <canvas id="chart-overview4" width="40" height="40"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive table-fix-head" style="max-height: 400px;">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Ativo</th>
+                                        <th>Local</th>
+                                        <th>Classe</th>
+                                        <th>Quantidade</th>
+                                        <th>Custo</th>
+                                        <th>Valor</th>
+                                        <th>Ganho</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="assets-table-body">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Renda fixa -->
+                    <div role="tabpanel" class="tab-pane" id="fixed-income">
+                        <h1>Renda fixa</h1>
+                    </div>
+
+                    <!-- Renda variável -->
+                    <div role="tabpanel" class="tab-pane" id="variable-income">
+                        <!-- Geral -->
+                        <h2 class="sub-header">Geral</h2>
+                    </div>
+
+                    <!-- Cripto -->
+                    <div role="tabpanel" class="tab-pane" id="cripto">
+                        <h1>Cripto</h1>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js" integrity="sha384-nvAa0+6Qg9clwYCGGPpDQLVpLNn0fRaROjHqs13t4Ggj3Ez50XnGQqc/r8MhnRDZ" crossorigin="anonymous"></script>
+
+    <!-- Bootstrap -->
+    <script src="assets/js/bootstrap.min.js"></script>
+
+    <!-- chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.0.2/dist/chart.min.js"></script>
+
+    <script src="assets/js/main.js"></script>
+
+</body>
+</html>
