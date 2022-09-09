@@ -36,36 +36,23 @@
                 <hr>
 
                 <h4>Instituição</h4>
-                <!-- https://getbootstrap.com/docs/5.0/forms/select/ -->
-                <div class="dropdown">
-                    <button class="btn btn-default dropdown-toggle" type="button" id="dropdown-menu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                        - Selecione -
-                        <span class="caret"></span>
-                    </button>
-                    <ul class="dropdown-menu" aria-labelledby="dropdown-menu1"></ul>
-                </div>
+                <select class="form-select" aria-label="Default select example" id="select-menu1">
+                    <option value="0" selected>- Qualquer -</option>
+                </select>
 
                 <hr>
 
                 <h4>Evento</h4>
-                <div class="dropdown">
-                    <button class="btn btn-default dropdown-toggle" type="button" id="dropdown-menu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                        - Selecione -
-                        <span class="caret"></span>
-                    </button>
-                    <ul class="dropdown-menu" aria-labelledby="dropdown-menu1"></ul>
-                </div>
+                <select class="form-select" aria-label="Default select example" id="select-menu2">
+                    <option value="0" selected>- Qualquer -</option>
+                </select>
 
                 <hr>
 
                 <h4>Ativo</h4>
-                <div class="dropdown">
-                    <button class="btn btn-default dropdown-toggle" type="button" id="dropdown-menu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                        - Selecione -
-                        <span class="caret"></span>
-                    </button>
-                    <ul class="dropdown-menu" aria-labelledby="dropdown-menu1"></ul>
-                </div>
+                <select class="form-select" aria-label="Default select example" id="select-menu3">
+                    <option value="0" selected>- Qualquer -</option>
+                </select>
             </div>
 
             <!-- Main content -->
@@ -73,7 +60,7 @@
                 <h1 class="page-header">Extrato</h1>
 
                 <p id="asd"></p>
-                <div class="table-responsive table-fix-head">
+                <div class="table-responsive table-fix-head" style="max-height: 80vh;">
                     <table class="table table-striped">
                         <thead>
                             <tr>
