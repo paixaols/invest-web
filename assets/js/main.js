@@ -69,6 +69,11 @@ function plot(data, ctx, title=undefined, xlabel=undefined, ylabel=undefined, ty
                     stacked: true
                 },
                 y: {
+                    ticks: {
+                        callback: function(val, index) {// Fix RangeError: minimumFractionDigits value is out of range.
+                            return val
+                        }
+                    },
                     title: {
                         display: true,
                         text: ylabel
@@ -253,6 +258,30 @@ function updateTabOverviewSectionCurrent(currentDate, currentWallet) {
     }
 }
 
+function updateTabVariable(wallet){
+    var valueByType = {}
+    for(i in wallet){
+        var asset = wallet[i]
+        var value = asset.value*asset.currency_rate
+        valueByType[asset.type] = (valueByType[asset.type] == undefined) ? value : valueByType[asset.type]+value
+    }
+
+    var t = Object.values(valueByType).reduce((a, b) => a + b, 0)// sum array elements
+    var values = Object.values(valueByType)
+    var valuesPct = []
+    for(i in values){valuesPct.push(100*values[i]/t)}
+    var data = {
+        labels: Object.keys(valueByType),
+        datasets: [{
+            data: valuesPct,
+            backgroundColor: faceColors[0],
+            borderWidth: 0,
+        }]
+    }
+    var ctx = document.getElementById('chart-variable1').getContext('2d')
+    plot(data, ctx, title='Título', xlabel=undefined, ylabel='%', type='bar')
+}
+
 function clearTabOverviewSectionHistory(){
     document.getElementById('chart-overview1').remove()
     document.getElementById('chart-overview1-wrapper').innerHTML = '<canvas id="chart-overview1" width="40" height="40"></canvas>'
@@ -376,6 +405,14 @@ function firstRequestCallback(response) {
     walletOverTime = response
     let [currentDate, currentWallet, allMarkets, allClasses] = updateTabOverviewSectionHistory(walletOverTime)
     updateTabOverviewSectionCurrent(currentDate, currentWallet)
+    let variableIncome = []// retrieve this from updateTabOverviewSectionCurrent function
+    for(i in currentWallet){
+        var asset = currentWallet[i]
+        if(asset.class == 'RV'){
+            variableIncome.push(asset)
+        }
+    }
+    updateTabVariable(variableIncome)
     populateFilterCheckboxes(allMarkets, allClasses)
 }
 
