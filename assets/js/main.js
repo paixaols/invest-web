@@ -1,4 +1,27 @@
 // ------------------------------------------------------------------------- //
+// Helper functions
+// ------------------------------------------------------------------------- //
+function sortLabeledData(dataArray, labelArray){
+    var arrayOfObj = labelArray.map(function(d, i) {
+        return {
+            label: d,
+            data: dataArray[i] || 0
+        }
+    })
+    var sortedArrayOfObj = arrayOfObj.sort(function(a, b) {
+        return b.data-a.data
+        // return b.data>a.data
+    })
+    var newLabelArray = []
+    var newDataArray = []
+    sortedArrayOfObj.forEach(function(d){
+        newLabelArray.push(d.label)
+        newDataArray.push(d.data)
+    })
+    return [newDataArray, newLabelArray]
+}
+
+// ------------------------------------------------------------------------- //
 // API requests
 // ------------------------------------------------------------------------- //
 function makeRequest(method, url, data=undefined, callback=undefined) {
@@ -40,6 +63,7 @@ const faceColors = [
     'rgba(14, 0, 171, 1)',
     'rgba(65, 125, 0, 1)'
 ]
+
 const fillColors = [
     'rgba(255, 99, 132, 0.2)',
     'rgba(54, 162, 235, 0.2)',
@@ -98,61 +122,81 @@ function plot(data, ctx, title=undefined, xlabel=undefined, ylabel=undefined, ty
 // ------------------------------------------------------------------------- //
 // Fill pages
 // ------------------------------------------------------------------------- //
-function updateTabOverviewSectionHistory(walletFiltered) {
-    // Parse wallet in selected time window
-    let time = []
-    let rfOverTime = []
-    let rvOverTime = []
-    let criptoOverTime = []
-    let total = []
-    let rfPct = []
-    let rvPct = []
-    let criptoPct = []
-    let currentDate = ''
+function parseWallet(filteredWalletHistory) {
+    let minDate = undefined
+    let maxDate = undefined
     let currentWallet = undefined
-    let allMarkets = []
-    let allClasses = []
-    for(i in walletFiltered){
-        var w = walletFiltered[i]
-        time.push(w.date.split('T')[0])
+    let marketsList = []
+    let classesList = []
+    let overallValues = {}
+    for(i in filteredWalletHistory){
+        var w = filteredWalletHistory[i]// Wallet in a given date
+        // var date = new Date(w.date)// TODO: fix timezone
+        var date = w.date.split('T')[0]
         var rf = 0
         var rv = 0
         var cripto = 0
         for(j in w.wallet){
             var asset = w.wallet[j]
             if(asset.class == 'RF'){
-                rf += asset.value*asset.currency_rate
+                rf += asset.value_brl
             }else if(asset.class == 'RV'){
-                rv += asset.value*asset.currency_rate
+                rv += asset.value_brl
+            }else if(asset.class == 'Cripto'){
+                cripto += asset.value_brl
             }else{
-                cripto += asset.value*asset.currency_rate
+                console.log('Unexpected asset class: '+asset.class)
             }
-            if(!allMarkets.includes(asset.market)){
-                allMarkets.push(asset.market)
+            if(!marketsList.includes(asset.market)){
+                marketsList.push(asset.market)
             }
-            if(!allClasses.includes(asset.class)){
-                allClasses.push(asset.class)
+            if(!classesList.includes(asset.class)){
+                classesList.push(asset.class)
             }
         }
-        rfOverTime.push(rf)
-        rvOverTime.push(rv)
-        criptoOverTime.push(cripto)
-        total.push(rf + rv + cripto)
-        rfPct.push(100*rf/(rf + rv + cripto))
-        rvPct.push(100*rv/(rf + rv + cripto))
-        criptoPct.push(100*cripto/(rf + rv + cripto))
-        if(w.date > currentDate){
-            currentDate = w.date.split('T')[0]
+        overallValues[date] = {'RF': rf, 'RV': rv, 'Cripto': cripto, 'Total': rf+rv+cripto}
+        if(date < minDate || minDate == undefined){
+            minDate = date
+        }
+        if(date > maxDate || maxDate == undefined){
+            maxDate = date
             currentWallet = w.wallet
         }
     }
+    let variableIncome = []
+    for(i in currentWallet){
+        var asset = currentWallet[i]
+        if(asset.class == 'RV'){
+            variableIncome.push(asset)
+        }
+    }
+    return [marketsList, classesList, [minDate, maxDate], currentWallet, overallValues, variableIncome]
+}
 
+function updateTabOverviewSectionHistory(dateRange, overallValues) {
     // Fill text
-    let Return = total[total.length-1]-total[0]
-    let returnPct = Return/total[0]
+    var minDate = dateRange[0]
+    var maxDate = dateRange[1]
+
+    let Return = overallValues[maxDate]['Total']-overallValues[minDate]['Total']
+    let returnPct = Return/overallValues[minDate]['Total']
     document.getElementById('return').innerText = `Retorno no período: ${currencyFormat.format(Return)} (${percentFormat.format(returnPct)})`
 
     // Make plots
+    let time = Object.keys(overallValues)
+    time.sort()
+    let rfPct = []
+    let rvPct = []
+    let criptoPct = []
+    let total = []
+    for(i in time){
+        var t = overallValues[time[i]]['Total']
+        total.push(t)
+        rfPct.push(100*overallValues[time[i]]['RF']/t)
+        rvPct.push(100*overallValues[time[i]]['RV']/t)
+        criptoPct.push(100*overallValues[time[i]]['Cripto']/t)
+    }
+
     var data = {
         labels: time,
         datasets: [{
@@ -191,8 +235,6 @@ function updateTabOverviewSectionHistory(walletFiltered) {
     }
     var ctx = document.getElementById('chart-overview2').getContext('2d')
     plot(data, ctx, title='Composição da carteira', xlabel=undefined, ylabel='%', type='bar', scale=[0, 100])
-
-    return [currentDate, currentWallet, allMarkets, allClasses]
 }
 
 function updateTabOverviewSectionCurrent(currentDate, currentWallet) {
@@ -258,20 +300,22 @@ function updateTabOverviewSectionCurrent(currentDate, currentWallet) {
     }
 }
 
-function updateTabVariable(wallet){
+function updateTabVariableIncome(wallet){
     var valueByType = {}
     for(i in wallet){
         var asset = wallet[i]
-        var value = asset.value*asset.currency_rate
+        var value = asset.value_brl
         valueByType[asset.type] = (valueByType[asset.type] == undefined) ? value : valueByType[asset.type]+value
     }
 
-    var t = Object.values(valueByType).reduce((a, b) => a + b, 0)// sum array elements
+    var labels = Object.keys(valueByType)
     var values = Object.values(valueByType)
+    var t = values.reduce((a, b) => a + b, 0)// sum array elements
     var valuesPct = []
     for(i in values){valuesPct.push(100*values[i]/t)}
+    var [valuesPct, labels] = sortLabeledData(valuesPct, labels)
     var data = {
-        labels: Object.keys(valueByType),
+        labels: labels,
         datasets: [{
             data: valuesPct,
             backgroundColor: faceColors[0],
@@ -294,6 +338,11 @@ function clearTabOverviewSectionCurrent(){
     document.getElementById('chart-overview3-wrapper').innerHTML = '<canvas id="chart-overview3" width="40" height="40"></canvas>'
     document.getElementById('chart-overview4').remove()
     document.getElementById('chart-overview4-wrapper').innerHTML = '<canvas id="chart-overview4" width="40" height="40"></canvas>'
+}
+
+function clearTabVariableIncome(){
+    document.getElementById('chart-variable1').remove()
+    document.getElementById('chart-variable1-wrapper').innerHTML = '<canvas id="chart-variable1" width="40" height="40"></canvas>'
 }
 
 // ------------------------------------------------------------------------- //
@@ -333,19 +382,22 @@ document.getElementById('btn-apply-filters').onclick = function(){
         }
         makeRequest('POST', apiURL+'/load-wallet', data=timeFilter, inclusiveWalletCallback)
     }else{// No request
-        let filteredWallet = []
-        for(i in walletOverTime){
-            var date = new Date(walletOverTime[i].date)
+        let filteredWalletHistory = []
+        for(i in walletHistory){
+            var date = new Date(walletHistory[i].date)
             if(date >= beginFilter){
-                filteredWallet.push(walletOverTime[i])
+                filteredWalletHistory.push(walletHistory[i])
             }
         }
-        filteredWallet = filterMarketAndClass(filteredWallet)
+        filteredWalletHistory = filterMarketAndClass(filteredWalletHistory)
+        let [marketsList, classesList, dateRange, currentWallet, overallValues, variableIncome] = parseWallet(filteredWalletHistory)
         clearTabOverviewSectionHistory()
+        updateTabOverviewSectionHistory(dateRange, overallValues)
         clearTabOverviewSectionCurrent()
-        let [currentDate, currentWallet, allMarkets, allClasses] = updateTabOverviewSectionHistory(filteredWallet)
-        updateTabOverviewSectionCurrent(currentDate, currentWallet)
-    }
+        updateTabOverviewSectionCurrent(dateRange[1], currentWallet)
+        clearTabVariableIncome()
+        updateTabVariableIncome(variableIncome)
+        }
 }
 
 function filterMarketAndClass(walletToFilter) {
@@ -393,7 +445,7 @@ const apiURL = 'http://127.0.0.1:5000'
 let currencyFormat = new Intl.NumberFormat('pt', {style: 'currency', currency: 'BRL'})
 let percentFormat = new Intl.NumberFormat('pt', {style: 'percent', minimumFractionDigits: 1})
 
-let walletOverTime = undefined
+let walletHistory = undefined
 let now = new Date()
 let startDate = new Date(now.getFullYear()-1, now.getMonth(), now.getDate())
 let timeFilter = {
@@ -402,27 +454,34 @@ let timeFilter = {
 }
 
 function firstRequestCallback(response) {
-    walletOverTime = response
-    let [currentDate, currentWallet, allMarkets, allClasses] = updateTabOverviewSectionHistory(walletOverTime)
-    updateTabOverviewSectionCurrent(currentDate, currentWallet)
-    let variableIncome = []// retrieve this from updateTabOverviewSectionCurrent function
-    for(i in currentWallet){
-        var asset = currentWallet[i]
-        if(asset.class == 'RV'){
-            variableIncome.push(asset)
+    walletHistory = response
+    for(i in walletHistory){
+        for(j in walletHistory[i].wallet){
+            walletHistory[i].wallet[j]['value_brl'] = walletHistory[i].wallet[j]['value']*walletHistory[i].wallet[j]['currency_rate']
         }
     }
-    updateTabVariable(variableIncome)
-    populateFilterCheckboxes(allMarkets, allClasses)
+    let [marketsList, classesList, dateRange, currentWallet, overallValues, variableIncome] = parseWallet(walletHistory)
+    populateFilterCheckboxes(marketsList, classesList)
+    updateTabOverviewSectionHistory(dateRange, overallValues)
+    updateTabOverviewSectionCurrent(dateRange[1], currentWallet)
+    updateTabVariableIncome(variableIncome)
 }
 
 function inclusiveWalletCallback(response) {
-    walletOverTime = response
-    filteredWallet = filterMarketAndClass(walletOverTime)
+    walletHistory = response
+    for(i in walletHistory){
+        for(j in walletHistory[i].wallet){
+            walletHistory[i].wallet[j]['value_brl'] = walletHistory[i].wallet[j]['value']*walletHistory[i].wallet[j]['currency_rate']
+        }
+    }
+    filteredWalletHistory = filterMarketAndClass(walletHistory)
+    let [marketsList, classesList, dateRange, currentWallet, overallValues, variableIncome] = parseWallet(filteredWalletHistory)
     clearTabOverviewSectionHistory()
+    updateTabOverviewSectionHistory(dateRange, overallValues)
     clearTabOverviewSectionCurrent()
-    let [currentDate, currentWallet, allMarkets, allClasses] = updateTabOverviewSectionHistory(filteredWallet)
-    updateTabOverviewSectionCurrent(currentDate, currentWallet)
+    updateTabOverviewSectionCurrent(dateRange[1], currentWallet)
+    clearTabVariableIncome()
+    updateTabVariableIncome(variableIncome)
 }
 
 function onLoad() {
