@@ -10,7 +10,7 @@ function sortLabeledData(dataArray, labelArray){
     })
     var sortedArrayOfObj = arrayOfObj.sort(function(a, b) {
         return b.data-a.data
-        // return b.data>a.data
+        // return b.data>a.data// FF
     })
     var newLabelArray = []
     var newDataArray = []
@@ -126,13 +126,16 @@ function parseWallet(filteredWalletHistory) {
     let minDate = undefined
     let maxDate = undefined
     let currentWallet = undefined
+    let variableIncomeHistory = []
+    let currentVariableIncome = []
+    let overallVariableIncome = {}
     let marketsList = []
     let classesList = []
     let overallValues = {}
     for(i in filteredWalletHistory){
         var w = filteredWalletHistory[i]// Wallet in a given date
-        // var date = new Date(w.date)// TODO: fix timezone
         var date = w.date.split('T')[0]
+        variableIncomeHistory.push({'date': date, 'wallet': []})
         var rf = 0
         var rv = 0
         var cripto = 0
@@ -142,6 +145,15 @@ function parseWallet(filteredWalletHistory) {
                 rf += asset.value_brl
             }else if(asset.class == 'RV'){
                 rv += asset.value_brl
+                variableIncomeHistory[variableIncomeHistory.length-1].wallet.push(asset)
+                if(overallVariableIncome[date] == undefined){
+                    overallVariableIncome[date] = {}
+                    overallVariableIncome[date][asset.type] = asset.value_brl
+                }else if(overallVariableIncome[date][asset.type] == undefined){
+                    overallVariableIncome[date][asset.type] = asset.value_brl
+                }else{
+                    overallVariableIncome[date][asset.type] += asset.value_brl
+                }
             }else if(asset.class == 'Cripto'){
                 cripto += asset.value_brl
             }else{
@@ -154,6 +166,7 @@ function parseWallet(filteredWalletHistory) {
                 classesList.push(asset.class)
             }
         }
+        overallVariableIncome[date]['Total'] = Object.values(overallVariableIncome[date]).reduce((a, b) => a + b, 0)
         overallValues[date] = {'RF': rf, 'RV': rv, 'Cripto': cripto, 'Total': rf+rv+cripto}
         if(date < minDate || minDate == undefined){
             minDate = date
@@ -163,14 +176,23 @@ function parseWallet(filteredWalletHistory) {
             currentWallet = w.wallet
         }
     }
-    let variableIncome = []
     for(i in currentWallet){
         var asset = currentWallet[i]
         if(asset.class == 'RV'){
-            variableIncome.push(asset)
+            currentVariableIncome.push(asset)
         }
     }
-    return [marketsList, classesList, [minDate, maxDate], currentWallet, overallValues, variableIncome]
+    var obj = {
+        'marketsList': marketsList,
+        'classesList': classesList,
+        'dateRange': [minDate, maxDate],
+        'overallValues': overallValues,
+        'currentWallet': currentWallet,
+        'variableIncomeHistory': variableIncomeHistory,
+        'overallVariableIncome': overallVariableIncome,
+        'currentVariableIncome': currentVariableIncome
+    }
+    return obj
 }
 
 function updateTabOverviewSectionHistory(dateRange, overallValues) {
@@ -300,11 +322,98 @@ function updateTabOverviewSectionCurrent(currentDate, currentWallet) {
     }
 }
 
-function updateTabVariableIncome(wallet){
+function updateTabVariableIncomeSectionHistory(dateRange, overallVariableIncome){
+    // Text
+    var minDate = dateRange[0]
+    var maxDate = dateRange[1]
+
+    var Return = overallVariableIncome[maxDate]['Total']-overallVariableIncome[minDate]['Total']
+    var returnPct = Return/overallVariableIncome[minDate]['Total']
+    document.getElementById('return-variableincome-tab').innerText = `Retorno no período: ${currencyFormat.format(Return)} (${percentFormat.format(returnPct)})`
+
+    // Plot
+    let allTypes = []
+    for(date in overallVariableIncome){
+        var types = Object.keys(overallVariableIncome[date])
+        for(t in types){
+            if(!allTypes.includes(types[t])){allTypes.push(types[t])}
+        }
+    }
+    allDates = Object.keys(overallVariableIncome)
+
+    let emptyDates = allDates.reduce((a, key) => {// {date1: undefined, ...}
+        a[key] = undefined
+        return a
+    }, {})
+    let transposeOverall = allTypes.reduce((a, key) => {// {type1: {}, ...}
+        a[key] = structuredClone(emptyDates)
+        return a
+    }, {})
+
+    for(t in allTypes){
+        for(d in allDates){
+            var val = overallVariableIncome[allDates[d]][allTypes[t]]
+            if(val != undefined){
+                transposeOverall[allTypes[t]][allDates[d]] = val
+            }
+        }
+    }
+
+    var types = Object.keys(transposeOverall)
+    let datasets = []
+    for(t in types){
+        if(types[t] == 'Total'){continue}
+        datasets.push({
+            data: Object.values(transposeOverall[types[t]]),
+            label: types[t],
+            backgroundColor: fillColors[t],
+            borderColor: faceColors[t],
+            borderWidth: 4,
+            fill: false,
+            tension: 0.2
+        })
+    }
+    var labels = Object.keys(transposeOverall[types[0]])
+    var data = {
+        labels: labels,
+        datasets: datasets
+    }
+    var ctx = document.getElementById('chart-variable1').getContext('2d')
+    plot(data, ctx, title='Título', xlabel=undefined, ylabel='R$', type='bar')
+
+    // Table
+    var minDate = dateRange[0]
+    var maxDate = dateRange[1]
+    let table = document.getElementById('variable-history-table-body')
+    table.innerText = ''
+    for(t in allTypes){
+        if(allTypes[t] == 'Total'){continue}
+        var html = `<tr><td>${Number(t)+1}</td>`
+        html += `<td>${allTypes[t]}</td>`
+        var valIni = transposeOverall[allTypes[t]][minDate]
+        html += `<td>${new Intl.NumberFormat('pt', {style: 'currency', currency: 'BRL'}).format(valIni)}</td>`
+        var valCurr = transposeOverall[allTypes[t]][maxDate]
+        html += `<td>${new Intl.NumberFormat('pt', {style: 'currency', currency: 'BRL'}).format(valCurr)}</td>`
+        var Return = valCurr-valIni
+        var returnPtc = Return/valIni
+        var style = (Return > 0) ? ' style="color: green;"' : (Return < 0) ? ' style="color: red;"' : ''
+        html += `<td${style}>${new Intl.NumberFormat('pt', {style: 'currency', currency: 'BRL'}).format(Return)} (${percentFormat.format(returnPtc)})</td></tr>`
+        table.insertAdjacentHTML('beforeend', html)
+    }
+}
+
+function updateTabVariableIncomeSectionCurrent(currentDate, wallet){
+    // Text
+    document.getElementById('current-date-variableincome-tab').innerText = `Última atualização: ${currentDate}`
+
+    // Plot
+    var costByType = {}
     var valueByType = {}
     for(i in wallet){
         var asset = wallet[i]
+        var cost = asset.cost_brl
         var value = asset.value_brl
+        costByType[asset.type] = (costByType[asset.type] == undefined) ? cost : costByType[asset.type]+cost
         valueByType[asset.type] = (valueByType[asset.type] == undefined) ? value : valueByType[asset.type]+value
     }
 
@@ -322,8 +431,26 @@ function updateTabVariableIncome(wallet){
             borderWidth: 0,
         }]
     }
-    var ctx = document.getElementById('chart-variable1').getContext('2d')
+    var ctx = document.getElementById('chart-variable2').getContext('2d')
     plot(data, ctx, title='Título', xlabel=undefined, ylabel='%', type='bar')
+
+    // Table
+    let table = document.getElementById('variable-current-table-body')
+    table.innerText = ''
+
+    for(i in labels){
+        var html = `<tr><td>${Number(i)+1}</td>`
+        html += `<td>${labels[i]}</td>`
+        var cost = costByType[labels[i]]
+        html += `<td>${new Intl.NumberFormat('pt', {style: 'currency', currency: 'BRL'}).format(cost)}</td>`
+        var value = valueByType[labels[i]]
+        html += `<td>${new Intl.NumberFormat('pt', {style: 'currency', currency: 'BRL'}).format(value)}</td>`
+        var gain = value-cost
+        var gainPtc = gain/cost
+        var style = (gain > 0) ? ' style="color: green;"' : (gain < 0) ? ' style="color: red;"' : ''
+        html += `<td${style}>${new Intl.NumberFormat('pt', {style: 'currency', currency: 'BRL'}).format(gain)} (${percentFormat.format(gainPtc)})</td></tr>`
+        table.insertAdjacentHTML('beforeend', html)
+    }
 }
 
 function clearTabOverviewSectionHistory(){
@@ -340,9 +467,14 @@ function clearTabOverviewSectionCurrent(){
     document.getElementById('chart-overview4-wrapper').innerHTML = '<canvas id="chart-overview4" width="40" height="40"></canvas>'
 }
 
-function clearTabVariableIncome(){
+function clearTabVariableIncomeSectionHistory(){
     document.getElementById('chart-variable1').remove()
     document.getElementById('chart-variable1-wrapper').innerHTML = '<canvas id="chart-variable1" width="40" height="40"></canvas>'
+}
+
+function clearTabVariableIncomeSectionCurrent(){
+    document.getElementById('chart-variable2').remove()
+    document.getElementById('chart-variable2-wrapper').innerHTML = '<canvas id="chart-variable2" width="40" height="40"></canvas>'
 }
 
 // ------------------------------------------------------------------------- //
@@ -390,14 +522,16 @@ document.getElementById('btn-apply-filters').onclick = function(){
             }
         }
         filteredWalletHistory = filterMarketAndClass(filteredWalletHistory)
-        let [marketsList, classesList, dateRange, currentWallet, overallValues, variableIncome] = parseWallet(filteredWalletHistory)
+        let pw = parseWallet(filteredWalletHistory)
         clearTabOverviewSectionHistory()
-        updateTabOverviewSectionHistory(dateRange, overallValues)
+        updateTabOverviewSectionHistory(pw.dateRange, pw.overallValues)
         clearTabOverviewSectionCurrent()
-        updateTabOverviewSectionCurrent(dateRange[1], currentWallet)
-        clearTabVariableIncome()
-        updateTabVariableIncome(variableIncome)
-        }
+        updateTabOverviewSectionCurrent(pw.dateRange[1], pw.currentWallet)
+        clearTabVariableIncomeSectionHistory()
+        updateTabVariableIncomeSectionHistory(pw.dateRange, pw.overallVariableIncome)
+        clearTabVariableIncomeSectionCurrent()
+        updateTabVariableIncomeSectionCurrent(pw.dateRange[1], pw.currentVariableIncome)
+    }
 }
 
 function filterMarketAndClass(walletToFilter) {
@@ -460,11 +594,12 @@ function firstRequestCallback(response) {
             walletHistory[i].wallet[j]['value_brl'] = walletHistory[i].wallet[j]['value']*walletHistory[i].wallet[j]['currency_rate']
         }
     }
-    let [marketsList, classesList, dateRange, currentWallet, overallValues, variableIncome] = parseWallet(walletHistory)
-    populateFilterCheckboxes(marketsList, classesList)
-    updateTabOverviewSectionHistory(dateRange, overallValues)
-    updateTabOverviewSectionCurrent(dateRange[1], currentWallet)
-    updateTabVariableIncome(variableIncome)
+    let pw = parseWallet(walletHistory)
+    populateFilterCheckboxes(pw.marketsList, pw.classesList)
+    updateTabOverviewSectionHistory(pw.dateRange, pw.overallValues)
+    updateTabOverviewSectionCurrent(pw.dateRange[1], pw.currentWallet)
+    updateTabVariableIncomeSectionHistory(pw.dateRange, pw.overallVariableIncome)
+    updateTabVariableIncomeSectionCurrent(pw.dateRange[1], pw.currentVariableIncome)
 }
 
 function inclusiveWalletCallback(response) {
@@ -475,13 +610,15 @@ function inclusiveWalletCallback(response) {
         }
     }
     filteredWalletHistory = filterMarketAndClass(walletHistory)
-    let [marketsList, classesList, dateRange, currentWallet, overallValues, variableIncome] = parseWallet(filteredWalletHistory)
+    let pw = parseWallet(filteredWalletHistory)
     clearTabOverviewSectionHistory()
-    updateTabOverviewSectionHistory(dateRange, overallValues)
+    updateTabOverviewSectionHistory(pw.dateRange, pw.overallValues)
     clearTabOverviewSectionCurrent()
-    updateTabOverviewSectionCurrent(dateRange[1], currentWallet)
-    clearTabVariableIncome()
-    updateTabVariableIncome(variableIncome)
+    updateTabOverviewSectionCurrent(pw.dateRange[1], pw.currentWallet)
+    clearTabVariableIncomeSectionHistory()
+    updateTabVariableIncomeSectionHistory(pw.dateRange, pw.overallVariableIncome)
+    clearTabVariableIncomeSectionCurrent()
+    updateTabVariableIncomeSectionCurrent(pw.dateRange[1], pw.currentVariableIncome)
 }
 
 function onLoad() {
