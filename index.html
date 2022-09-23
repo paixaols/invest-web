@@ -208,7 +208,65 @@
 
                     <!-- Cripto -->
                     <div role="tabpanel" class="tab-pane" id="cripto">
-                        <h2 class="sub-header">Cripto</h2>
+
+                        <!-- Histórico -->
+                        <h2 class="sub-header">Histórico</h2>
+                        <span id="return-cripto-tab" class="text-muted"></span>
+
+                        <div class="container-fluid">
+                            <div class="row">
+
+                                <div class="col-md-5" id="chart-cripto1-wrapper">
+                                    <canvas id="chart-cripto1" width="40" height="40"></canvas>
+                                </div>
+
+                                <div class="col-md-6 table-responsive table-fix-head" style="max-height: 400px;">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Grupo</th>
+                                                <th>Valor inicial</th>
+                                                <th>Valor atual</th>
+                                                <th>Retorno</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="cripto-history-table-body"></tbody>
+                                    </table>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- Carteira atual -->
+                        <h2 class="sub-header">Carteira atual</h2>
+                        <span id="current-date-cripto-tab" class="text-muted"></span>
+
+                        <div class="container-fluid">
+                            <div class="row">
+
+                                <div class="col-md-5" id="chart-cripto2-wrapper">
+                                    <canvas id="chart-cripto2" width="40" height="40"></canvas>
+                                </div>
+
+                                <div class="col-md-6 table-responsive table-fix-head" style="max-height: 400px;">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Grupo</th>
+                                                <th>Custo</th>
+                                                <th>Valor</th>
+                                                <th>Ganho</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="cripto-current-table-body"></tbody>
+                                    </table>
+                                </div>
+
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 

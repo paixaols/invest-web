@@ -126,16 +126,16 @@ function parseWallet(filteredWalletHistory) {
     let minDate = undefined
     let maxDate = undefined
     let currentWallet = undefined
-    let variableIncomeHistory = []
     let currentVariableIncome = []
     let overallVariableIncome = {}
+    let currentCripto = []
+    let overallCripto = {}
     let marketsList = []
     let classesList = []
     let overallValues = {}
     for(i in filteredWalletHistory){
         var w = filteredWalletHistory[i]// Wallet in a given date
         var date = w.date.split('T')[0]
-        variableIncomeHistory.push({'date': date, 'wallet': []})
         var rf = 0
         var rv = 0
         var cripto = 0
@@ -145,7 +145,6 @@ function parseWallet(filteredWalletHistory) {
                 rf += asset.value_brl
             }else if(asset.class == 'RV'){
                 rv += asset.value_brl
-                variableIncomeHistory[variableIncomeHistory.length-1].wallet.push(asset)
                 if(overallVariableIncome[date] == undefined){
                     overallVariableIncome[date] = {}
                     overallVariableIncome[date][asset.type] = asset.value_brl
@@ -156,6 +155,14 @@ function parseWallet(filteredWalletHistory) {
                 }
             }else if(asset.class == 'Cripto'){
                 cripto += asset.value_brl
+                if(overallCripto[date] == undefined){
+                    overallCripto[date] = {}
+                    overallCripto[date][asset.type] = asset.value_brl
+                }else if(overallCripto[date][asset.type] == undefined){
+                    overallCripto[date][asset.type] = asset.value_brl
+                }else{
+                    overallCripto[date][asset.type] += asset.value_brl
+                }
             }else{
                 console.log('Unexpected asset class: '+asset.class)
             }
@@ -166,8 +173,9 @@ function parseWallet(filteredWalletHistory) {
                 classesList.push(asset.class)
             }
         }
-        overallVariableIncome[date]['Total'] = Object.values(overallVariableIncome[date]).reduce((a, b) => a + b, 0)
         overallValues[date] = {'RF': rf, 'RV': rv, 'Cripto': cripto, 'Total': rf+rv+cripto}
+        overallVariableIncome[date]['Total'] = Object.values(overallVariableIncome[date]).reduce((a, b) => a + b, 0)
+        overallCripto[date]['Total'] = Object.values(overallCripto[date]).reduce((a, b) => a + b, 0)
         if(date < minDate || minDate == undefined){
             minDate = date
         }
@@ -180,6 +188,8 @@ function parseWallet(filteredWalletHistory) {
         var asset = currentWallet[i]
         if(asset.class == 'RV'){
             currentVariableIncome.push(asset)
+        }else if(asset.class == 'Cripto'){
+            currentCripto.push(asset)
         }
     }
     var obj = {
@@ -188,9 +198,10 @@ function parseWallet(filteredWalletHistory) {
         'dateRange': [minDate, maxDate],
         'overallValues': overallValues,
         'currentWallet': currentWallet,
-        'variableIncomeHistory': variableIncomeHistory,
         'overallVariableIncome': overallVariableIncome,
-        'currentVariableIncome': currentVariableIncome
+        'currentVariableIncome': currentVariableIncome,
+        'overallCripto': overallCripto,
+        'currentCripto': currentCripto
     }
     return obj
 }
@@ -379,7 +390,7 @@ function updateTabVariableIncomeSectionHistory(dateRange, overallVariableIncome)
         datasets: datasets
     }
     var ctx = document.getElementById('chart-variable1').getContext('2d')
-    plot(data, ctx, title='Título', xlabel=undefined, ylabel='R$', type='bar')
+    plot(data, ctx, title='Grupos de ativos', xlabel=undefined, ylabel='R$', type='bar')
 
     // Table
     var minDate = dateRange[0]
@@ -432,10 +443,141 @@ function updateTabVariableIncomeSectionCurrent(currentDate, wallet){
         }]
     }
     var ctx = document.getElementById('chart-variable2').getContext('2d')
-    plot(data, ctx, title='Título', xlabel=undefined, ylabel='%', type='bar')
+    plot(data, ctx, title='Composição da carteira', xlabel=undefined, ylabel='%', type='bar')
 
     // Table
     let table = document.getElementById('variable-current-table-body')
+    table.innerText = ''
+
+    for(i in labels){
+        var html = `<tr><td>${Number(i)+1}</td>`
+        html += `<td>${labels[i]}</td>`
+        var cost = costByType[labels[i]]
+        html += `<td>${new Intl.NumberFormat('pt', {style: 'currency', currency: 'BRL'}).format(cost)}</td>`
+        var value = valueByType[labels[i]]
+        html += `<td>${new Intl.NumberFormat('pt', {style: 'currency', currency: 'BRL'}).format(value)}</td>`
+        var gain = value-cost
+        var gainPtc = gain/cost
+        var style = (gain > 0) ? ' style="color: green;"' : (gain < 0) ? ' style="color: red;"' : ''
+        html += `<td${style}>${new Intl.NumberFormat('pt', {style: 'currency', currency: 'BRL'}).format(gain)} (${percentFormat.format(gainPtc)})</td></tr>`
+        table.insertAdjacentHTML('beforeend', html)
+    }
+}
+
+function updateTabCriptoSectionHistory(dateRange, overallCripto){
+    // Text
+    var minDate = dateRange[0]
+    var maxDate = dateRange[1]
+
+    var Return = overallCripto[maxDate]['Total']-overallCripto[minDate]['Total']
+    var returnPct = Return/overallCripto[minDate]['Total']
+    document.getElementById('return-cripto-tab').innerText = `Retorno no período: ${currencyFormat.format(Return)} (${percentFormat.format(returnPct)})`
+
+    // Plot
+    let allTypes = []
+    for(date in overallCripto){
+        var types = Object.keys(overallCripto[date])
+        for(t in types){
+            if(!allTypes.includes(types[t])){allTypes.push(types[t])}
+        }
+    }
+    allDates = Object.keys(overallCripto)
+
+    let emptyDates = allDates.reduce((a, key) => {// {date1: undefined, ...}
+        a[key] = undefined
+        return a
+    }, {})
+    let transposeOverall = allTypes.reduce((a, key) => {// {type1: {}, ...}
+        a[key] = structuredClone(emptyDates)
+        return a
+    }, {})
+
+    for(t in allTypes){
+        for(d in allDates){
+            var val = overallCripto[allDates[d]][allTypes[t]]
+            if(val != undefined){
+                transposeOverall[allTypes[t]][allDates[d]] = val
+            }
+        }
+    }
+
+    var types = Object.keys(transposeOverall)
+    let datasets = []
+    for(t in types){
+        if(types[t] == 'Total'){continue}
+        datasets.push({
+            data: Object.values(transposeOverall[types[t]]),
+            label: types[t],
+            backgroundColor: fillColors[t],
+            borderColor: faceColors[t],
+            borderWidth: 4,
+            fill: false,
+            tension: 0.2
+        })
+    }
+    var labels = Object.keys(transposeOverall[types[0]])
+    var data = {
+        labels: labels,
+        datasets: datasets
+    }
+    var ctx = document.getElementById('chart-cripto1').getContext('2d')
+    plot(data, ctx, title='Grupos de ativos', xlabel=undefined, ylabel='R$', type='bar')
+
+    // Table
+    var minDate = dateRange[0]
+    var maxDate = dateRange[1]
+    let table = document.getElementById('cripto-history-table-body')
+    table.innerText = ''
+    for(t in allTypes){
+        if(allTypes[t] == 'Total'){continue}
+        var html = `<tr><td>${Number(t)+1}</td>`
+        html += `<td>${allTypes[t]}</td>`
+        var valIni = transposeOverall[allTypes[t]][minDate]
+        html += `<td>${new Intl.NumberFormat('pt', {style: 'currency', currency: 'BRL'}).format(valIni)}</td>`
+        var valCurr = transposeOverall[allTypes[t]][maxDate]
+        html += `<td>${new Intl.NumberFormat('pt', {style: 'currency', currency: 'BRL'}).format(valCurr)}</td>`
+        var Return = valCurr-valIni
+        var returnPtc = Return/valIni
+        var style = (Return > 0) ? ' style="color: green;"' : (Return < 0) ? ' style="color: red;"' : ''
+        html += `<td${style}>${new Intl.NumberFormat('pt', {style: 'currency', currency: 'BRL'}).format(Return)} (${percentFormat.format(returnPtc)})</td></tr>`
+        table.insertAdjacentHTML('beforeend', html)
+    }
+}
+
+function updateTabCriptoSectionCurrent(currentDate, wallet){
+    // Text
+    document.getElementById('current-date-cripto-tab').innerText = `Última atualização: ${currentDate}`
+
+    // Plot
+    var costByType = {}
+    var valueByType = {}
+    for(i in wallet){
+        var asset = wallet[i]
+        var cost = asset.cost_brl
+        var value = asset.value_brl
+        costByType[asset.type] = (costByType[asset.type] == undefined) ? cost : costByType[asset.type]+cost
+        valueByType[asset.type] = (valueByType[asset.type] == undefined) ? value : valueByType[asset.type]+value
+    }
+
+    var labels = Object.keys(valueByType)
+    var values = Object.values(valueByType)
+    var t = values.reduce((a, b) => a + b, 0)// sum array elements
+    var valuesPct = []
+    for(i in values){valuesPct.push(100*values[i]/t)}
+    var [valuesPct, labels] = sortLabeledData(valuesPct, labels)
+    var data = {
+        labels: labels,
+        datasets: [{
+            data: valuesPct,
+            backgroundColor: faceColors[0],
+            borderWidth: 0,
+        }]
+    }
+    var ctx = document.getElementById('chart-cripto2').getContext('2d')
+    plot(data, ctx, title='Composição da carteira', xlabel=undefined, ylabel='%', type='bar')
+
+    // Table
+    let table = document.getElementById('cripto-current-table-body')
     table.innerText = ''
 
     for(i in labels){
@@ -475,6 +617,16 @@ function clearTabVariableIncomeSectionHistory(){
 function clearTabVariableIncomeSectionCurrent(){
     document.getElementById('chart-variable2').remove()
     document.getElementById('chart-variable2-wrapper').innerHTML = '<canvas id="chart-variable2" width="40" height="40"></canvas>'
+}
+
+function clearTabCriptoSectionHistory(){
+    document.getElementById('chart-cripto1').remove()
+    document.getElementById('chart-cripto1-wrapper').innerHTML = '<canvas id="chart-cripto1" width="40" height="40"></canvas>'
+}
+
+function clearTabCriptoSectionCurrent(){
+    document.getElementById('chart-cripto2').remove()
+    document.getElementById('chart-cripto2-wrapper').innerHTML = '<canvas id="chart-cripto2" width="40" height="40"></canvas>'
 }
 
 // ------------------------------------------------------------------------- //
@@ -531,6 +683,10 @@ document.getElementById('btn-apply-filters').onclick = function(){
         updateTabVariableIncomeSectionHistory(pw.dateRange, pw.overallVariableIncome)
         clearTabVariableIncomeSectionCurrent()
         updateTabVariableIncomeSectionCurrent(pw.dateRange[1], pw.currentVariableIncome)
+        clearTabCriptoSectionHistory()
+        updateTabCriptoSectionHistory(pw.dateRange, pw.overallCripto)
+        clearTabCriptoSectionCurrent()
+        updateTabCriptoSectionCurrent(pw.dateRange[1], pw.currentCripto)
     }
 }
 
@@ -600,6 +756,8 @@ function firstRequestCallback(response) {
     updateTabOverviewSectionCurrent(pw.dateRange[1], pw.currentWallet)
     updateTabVariableIncomeSectionHistory(pw.dateRange, pw.overallVariableIncome)
     updateTabVariableIncomeSectionCurrent(pw.dateRange[1], pw.currentVariableIncome)
+    updateTabCriptoSectionHistory(pw.dateRange, pw.overallCripto)
+    updateTabCriptoSectionCurrent(pw.dateRange[1], pw.currentCripto)
 }
 
 function inclusiveWalletCallback(response) {
@@ -619,6 +777,10 @@ function inclusiveWalletCallback(response) {
     updateTabVariableIncomeSectionHistory(pw.dateRange, pw.overallVariableIncome)
     clearTabVariableIncomeSectionCurrent()
     updateTabVariableIncomeSectionCurrent(pw.dateRange[1], pw.currentVariableIncome)
+    clearTabCriptoSectionHistory()
+    updateTabCriptoSectionHistory(pw.dateRange, pw.overallCripto)
+    clearTabCriptoSectionCurrent()
+    updateTabCriptoSectionCurrent(pw.dateRange[1], pw.currentCripto)
 }
 
 function onLoad() {
