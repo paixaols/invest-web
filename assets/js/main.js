@@ -139,26 +139,22 @@ function parseWallet(filteredWalletHistory) {
         var rf = 0
         var rv = 0
         var cripto = 0
+        overallVariableIncome[date] = {}
+        overallCripto[date] = {}
         for(j in w.wallet){
             var asset = w.wallet[j]
             if(asset.class == 'RF'){
                 rf += asset.value_brl
             }else if(asset.class == 'RV'){
                 rv += asset.value_brl
-                if(overallVariableIncome[date] == undefined){
-                    overallVariableIncome[date] = {}
-                    overallVariableIncome[date][asset.type] = asset.value_brl
-                }else if(overallVariableIncome[date][asset.type] == undefined){
+                if(overallVariableIncome[date][asset.type] == undefined){
                     overallVariableIncome[date][asset.type] = asset.value_brl
                 }else{
                     overallVariableIncome[date][asset.type] += asset.value_brl
                 }
             }else if(asset.class == 'Cripto'){
                 cripto += asset.value_brl
-                if(overallCripto[date] == undefined){
-                    overallCripto[date] = {}
-                    overallCripto[date][asset.type] = asset.value_brl
-                }else if(overallCripto[date][asset.type] == undefined){
+                if(overallCripto[date][asset.type] == undefined){
                     overallCripto[date][asset.type] = asset.value_brl
                 }else{
                     overallCripto[date][asset.type] += asset.value_brl
@@ -527,7 +523,6 @@ function updateTabCriptoSectionHistory(dateRange, overallCripto){
     var minDate = dateRange[0]
     var maxDate = dateRange[1]
     let table = document.getElementById('cripto-history-table-body')
-    table.innerText = ''
     for(t in allTypes){
         if(allTypes[t] == 'Total'){continue}
         var html = `<tr><td>${Number(t)+1}</td>`
@@ -578,8 +573,6 @@ function updateTabCriptoSectionCurrent(currentDate, wallet){
 
     // Table
     let table = document.getElementById('cripto-current-table-body')
-    table.innerText = ''
-
     for(i in labels){
         var html = `<tr><td>${Number(i)+1}</td>`
         html += `<td>${labels[i]}</td>`
@@ -610,21 +603,29 @@ function clearTabOverviewSectionCurrent(){
 }
 
 function clearTabVariableIncomeSectionHistory(){
+    document.getElementById('return-variableincome-tab').innerText = ''
+    document.getElementById('variable-history-table-body').innerText = ''
     document.getElementById('chart-variable1').remove()
     document.getElementById('chart-variable1-wrapper').innerHTML = '<canvas id="chart-variable1" width="40" height="40"></canvas>'
 }
 
 function clearTabVariableIncomeSectionCurrent(){
+    document.getElementById('current-date-variableincome-tab').innerText = ''
+    document.getElementById('variable-current-table-body').innerText = ''
     document.getElementById('chart-variable2').remove()
     document.getElementById('chart-variable2-wrapper').innerHTML = '<canvas id="chart-variable2" width="40" height="40"></canvas>'
 }
 
 function clearTabCriptoSectionHistory(){
+    document.getElementById('return-cripto-tab').innerText = ''
+    document.getElementById('cripto-history-table-body').innerText = ''
     document.getElementById('chart-cripto1').remove()
     document.getElementById('chart-cripto1-wrapper').innerHTML = '<canvas id="chart-cripto1" width="40" height="40"></canvas>'
 }
 
 function clearTabCriptoSectionCurrent(){
+    document.getElementById('current-date-cripto-tab').innerText = ''
+    document.getElementById('cripto-current-table-body').innerText = ''
     document.getElementById('chart-cripto2').remove()
     document.getElementById('chart-cripto2-wrapper').innerHTML = '<canvas id="chart-cripto2" width="40" height="40"></canvas>'
 }
@@ -680,13 +681,17 @@ document.getElementById('btn-apply-filters').onclick = function(){
         clearTabOverviewSectionCurrent()
         updateTabOverviewSectionCurrent(pw.dateRange[1], pw.currentWallet)
         clearTabVariableIncomeSectionHistory()
-        updateTabVariableIncomeSectionHistory(pw.dateRange, pw.overallVariableIncome)
         clearTabVariableIncomeSectionCurrent()
-        updateTabVariableIncomeSectionCurrent(pw.dateRange[1], pw.currentVariableIncome)
+        if(pw.classesList.includes('RV')){
+            updateTabVariableIncomeSectionHistory(pw.dateRange, pw.overallVariableIncome)
+            updateTabVariableIncomeSectionCurrent(pw.dateRange[1], pw.currentVariableIncome)
+        }
         clearTabCriptoSectionHistory()
-        updateTabCriptoSectionHistory(pw.dateRange, pw.overallCripto)
         clearTabCriptoSectionCurrent()
-        updateTabCriptoSectionCurrent(pw.dateRange[1], pw.currentCripto)
+        if(pw.classesList.includes('Cripto')){
+            updateTabCriptoSectionHistory(pw.dateRange, pw.overallCripto)
+            updateTabCriptoSectionCurrent(pw.dateRange[1], pw.currentCripto)
+        }
     }
 }
 
@@ -754,10 +759,14 @@ function firstRequestCallback(response) {
     populateFilterCheckboxes(pw.marketsList, pw.classesList)
     updateTabOverviewSectionHistory(pw.dateRange, pw.overallValues)
     updateTabOverviewSectionCurrent(pw.dateRange[1], pw.currentWallet)
-    updateTabVariableIncomeSectionHistory(pw.dateRange, pw.overallVariableIncome)
-    updateTabVariableIncomeSectionCurrent(pw.dateRange[1], pw.currentVariableIncome)
-    updateTabCriptoSectionHistory(pw.dateRange, pw.overallCripto)
-    updateTabCriptoSectionCurrent(pw.dateRange[1], pw.currentCripto)
+    if(pw.classesList.includes('RV')){
+        updateTabVariableIncomeSectionHistory(pw.dateRange, pw.overallVariableIncome)
+        updateTabVariableIncomeSectionCurrent(pw.dateRange[1], pw.currentVariableIncome)
+    }
+    if(pw.classesList.includes('Cripto')){
+        updateTabCriptoSectionHistory(pw.dateRange, pw.overallCripto)
+        updateTabCriptoSectionCurrent(pw.dateRange[1], pw.currentCripto)
+    }
 }
 
 function inclusiveWalletCallback(response) {
@@ -774,13 +783,17 @@ function inclusiveWalletCallback(response) {
     clearTabOverviewSectionCurrent()
     updateTabOverviewSectionCurrent(pw.dateRange[1], pw.currentWallet)
     clearTabVariableIncomeSectionHistory()
-    updateTabVariableIncomeSectionHistory(pw.dateRange, pw.overallVariableIncome)
     clearTabVariableIncomeSectionCurrent()
-    updateTabVariableIncomeSectionCurrent(pw.dateRange[1], pw.currentVariableIncome)
+    if(pw.classesList.includes('RV')){
+        updateTabVariableIncomeSectionHistory(pw.dateRange, pw.overallVariableIncome)
+        updateTabVariableIncomeSectionCurrent(pw.dateRange[1], pw.currentVariableIncome)
+    }
     clearTabCriptoSectionHistory()
-    updateTabCriptoSectionHistory(pw.dateRange, pw.overallCripto)
     clearTabCriptoSectionCurrent()
-    updateTabCriptoSectionCurrent(pw.dateRange[1], pw.currentCripto)
+    if(pw.classesList.includes('Cripto')){
+        updateTabCriptoSectionHistory(pw.dateRange, pw.overallCripto)
+        updateTabCriptoSectionCurrent(pw.dateRange[1], pw.currentCripto)
+    }
 }
 
 function onLoad() {
