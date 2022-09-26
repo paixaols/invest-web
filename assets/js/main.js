@@ -840,8 +840,8 @@ function filterMarketAndClass(walletToFilter) {
 // ------------------------------------------------------------------------- //
 // Initial definitions and parameters
 // ------------------------------------------------------------------------- //
-// const apiURL = 'https://labs-api-investe.herokuapp.com'
-const apiURL = 'http://127.0.0.1:5000'
+const apiURL = 'https://labs-api-investe.herokuapp.com'
+// const apiURL = 'http://127.0.0.1:5000'
 
 // TODO: construir um currencyFormat pra qq moeda
 let currencyFormat = new Intl.NumberFormat('pt', {style: 'currency', currency: 'BRL'})
