@@ -126,6 +126,7 @@ function parseWallet(filteredWalletHistory) {
     let minDate = undefined
     let maxDate = undefined
     let currentWallet = undefined
+    let currentFixedIncome = []
     let currentVariableIncome = []
     let overallVariableIncome = {}
     let currentCripto = []
@@ -182,7 +183,9 @@ function parseWallet(filteredWalletHistory) {
     }
     for(i in currentWallet){
         var asset = currentWallet[i]
-        if(asset.class == 'RV'){
+        if(asset.class == 'RF'){
+            currentFixedIncome.push(asset)
+        }else if(asset.class == 'RV'){
             currentVariableIncome.push(asset)
         }else if(asset.class == 'Cripto'){
             currentCripto.push(asset)
@@ -194,6 +197,7 @@ function parseWallet(filteredWalletHistory) {
         'dateRange': [minDate, maxDate],
         'overallValues': overallValues,
         'currentWallet': currentWallet,
+        'currentFixedIncome': currentFixedIncome,
         'overallVariableIncome': overallVariableIncome,
         'currentVariableIncome': currentVariableIncome,
         'overallCripto': overallCripto,
@@ -329,6 +333,98 @@ function updateTabOverviewSectionCurrent(currentDate, currentWallet) {
     }
 }
 
+function updateTabFixedIncomeSectionCurrent(currentDate, wallet){
+    // Text
+    document.getElementById('current-date-fixedincome-tab').innerText = `Última atualização: ${currentDate}`
+
+    // Plot
+    var costByType = {}
+    var valueByType = {}
+    var valueByExpiration = {}
+    var minExpYear = 2200
+    var maxExpYear = 0
+    for(i in wallet){
+        var asset = wallet[i]
+        var cost = asset.cost_brl
+        var value = asset.value_brl
+        costByType[asset.type] = (costByType[asset.type] == undefined) ? cost : costByType[asset.type]+cost
+        valueByType[asset.type] = (valueByType[asset.type] == undefined) ? value : valueByType[asset.type]+value
+        var expYear = new Date(asset.expire).getUTCFullYear()
+        if(expYear == 2200){continue}// Exclui ativos sem data de vencimento (cadastrados com vencimento em 2200)
+        if(expYear < minExpYear){minExpYear = expYear}
+        if(expYear > maxExpYear){maxExpYear = expYear}
+        if(valueByExpiration[asset.type] == undefined){
+            valueByExpiration[asset.type] = {}
+            valueByExpiration[asset.type][expYear] = value
+        }else{
+            if(valueByExpiration[asset.type][expYear] == undefined){
+                valueByExpiration[asset.type][expYear] = value
+            }else{
+                valueByExpiration[asset.type][expYear] += value
+            }
+        }
+    }
+
+    var labels = Object.keys(valueByType)
+    var values = Object.values(valueByType)
+    var t = values.reduce((a, b) => a + b, 0)// sum array elements
+    var valuesPct = []
+    for(i in values){valuesPct.push(100*values[i]/t)}
+    var [valuesPct, labels] = sortLabeledData(valuesPct, labels)
+    var data = {
+        labels: labels,
+        datasets: [{
+            data: valuesPct,
+            backgroundColor: faceColors[0],
+            borderWidth: 0,
+        }]
+    }
+    var ctx = document.getElementById('chart-fixed2').getContext('2d')
+    plot(data, ctx, title='Composição da carteira', xlabel=undefined, ylabel='%', type='bar')
+
+    // Table
+    let table = document.getElementById('fixed-current-table-body')
+    for(i in labels){
+        var html = `<tr><td>${Number(i)+1}</td>`
+        html += `<td>${labels[i]}</td>`
+        var cost = costByType[labels[i]]
+        html += `<td>${new Intl.NumberFormat('pt', {style: 'currency', currency: 'BRL'}).format(cost)}</td>`
+        var value = valueByType[labels[i]]
+        html += `<td>${new Intl.NumberFormat('pt', {style: 'currency', currency: 'BRL'}).format(value)}</td>`
+        var gain = value-cost
+        var gainPtc = gain/cost
+        var style = (gain > 0) ? ' style="color: green;"' : (gain < 0) ? ' style="color: red;"' : ''
+        html += `<td${style}>${new Intl.NumberFormat('pt', {style: 'currency', currency: 'BRL'}).format(gain)} (${percentFormat.format(gainPtc)})</td></tr>`
+        table.insertAdjacentHTML('beforeend', html)
+    }
+
+    // Plot 2
+    var types = Object.keys(valueByExpiration)
+    let datasets = []
+    for(t in types){
+        var data = []
+        for(var y=minExpYear; y<=maxExpYear; y++){
+            var val = (valueByExpiration[types[t]][y] == undefined) ? 0 : valueByExpiration[types[t]][y]
+            data.push(val)
+        }
+        datasets.push({
+            data: data,
+            label: types[t],
+            backgroundColor: faceColors[t],
+            borderWidth: 0,
+            fill: false,
+        })
+    }
+    var labels = []
+    for(var y=minExpYear; y<=maxExpYear; y++){labels.push(y)}
+    var data = {
+        labels: labels,
+        datasets: datasets
+    }
+    var ctx = document.getElementById('chart-fixed3').getContext('2d')
+    plot(data, ctx, title='Valores por data de vencimento dos títulos', xlabel=undefined, ylabel='R$', type='bar')
+}
+
 function updateTabVariableIncomeSectionHistory(dateRange, overallVariableIncome){
     // Text
     var minDate = dateRange[0]
@@ -443,8 +539,6 @@ function updateTabVariableIncomeSectionCurrent(currentDate, wallet){
 
     // Table
     let table = document.getElementById('variable-current-table-body')
-    table.innerText = ''
-
     for(i in labels){
         var html = `<tr><td>${Number(i)+1}</td>`
         html += `<td>${labels[i]}</td>`
@@ -602,6 +696,15 @@ function clearTabOverviewSectionCurrent(){
     document.getElementById('chart-overview4-wrapper').innerHTML = '<canvas id="chart-overview4" width="40" height="40"></canvas>'
 }
 
+function clearTabFixedIncomeSectionCurrent(){
+    document.getElementById('current-date-fixedincome-tab').innerText = ''
+    document.getElementById('fixed-current-table-body').innerText = ''
+    document.getElementById('chart-fixed2').remove()
+    document.getElementById('chart-fixed2-wrapper').innerHTML = '<canvas id="chart-fixed2" width="40" height="40"></canvas>'
+    document.getElementById('chart-fixed3').remove()
+    document.getElementById('chart-fixed3-wrapper').innerHTML = '<canvas id="chart-fixed3" width="40" height="20"></canvas>'
+}
+
 function clearTabVariableIncomeSectionHistory(){
     document.getElementById('return-variableincome-tab').innerText = ''
     document.getElementById('variable-history-table-body').innerText = ''
@@ -680,6 +783,10 @@ document.getElementById('btn-apply-filters').onclick = function(){
         updateTabOverviewSectionHistory(pw.dateRange, pw.overallValues)
         clearTabOverviewSectionCurrent()
         updateTabOverviewSectionCurrent(pw.dateRange[1], pw.currentWallet)
+        clearTabFixedIncomeSectionCurrent()
+        if(pw.classesList.includes('RF')){
+            updateTabFixedIncomeSectionCurrent(pw.dateRange[1], pw.currentFixedIncome)
+        }
         clearTabVariableIncomeSectionHistory()
         clearTabVariableIncomeSectionCurrent()
         if(pw.classesList.includes('RV')){
@@ -759,6 +866,9 @@ function firstRequestCallback(response) {
     populateFilterCheckboxes(pw.marketsList, pw.classesList)
     updateTabOverviewSectionHistory(pw.dateRange, pw.overallValues)
     updateTabOverviewSectionCurrent(pw.dateRange[1], pw.currentWallet)
+    if(pw.classesList.includes('RF')){
+        updateTabFixedIncomeSectionCurrent(pw.dateRange[1], pw.currentFixedIncome)
+    }
     if(pw.classesList.includes('RV')){
         updateTabVariableIncomeSectionHistory(pw.dateRange, pw.overallVariableIncome)
         updateTabVariableIncomeSectionCurrent(pw.dateRange[1], pw.currentVariableIncome)
@@ -782,6 +892,10 @@ function inclusiveWalletCallback(response) {
     updateTabOverviewSectionHistory(pw.dateRange, pw.overallValues)
     clearTabOverviewSectionCurrent()
     updateTabOverviewSectionCurrent(pw.dateRange[1], pw.currentWallet)
+    clearTabFixedIncomeSectionCurrent()
+    if(pw.classesList.includes('RF')){
+        updateTabFixedIncomeSectionCurrent(pw.dateRange[1], pw.currentFixedIncome)
+    }
     clearTabVariableIncomeSectionHistory()
     clearTabVariableIncomeSectionCurrent()
     if(pw.classesList.includes('RV')){
