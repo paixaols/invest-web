@@ -1,5 +1,5 @@
-// const apiURL = 'https://labs-api-investe.herokuapp.com'
-const apiURL = 'http://127.0.0.1:5000'
+const apiURL = 'https://labs-api-investe.herokuapp.com'
+// const apiURL = 'http://127.0.0.1:5000'
 
 function makeRequest(method, url, data=undefined, callback=undefined) {
     let xhr = new XMLHttpRequest()
