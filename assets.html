@@ -35,21 +35,21 @@
 
                 <hr>
 
-                <h4>Instituição</h4>
+                <h4>Local</h4>
                 <select class="form-select" aria-label="Default select example" id="select-menu1">
                     <option value="0" selected>- Qualquer -</option>
                 </select>
 
                 <hr>
 
-                <h4>Evento</h4>
+                <h4>Classe</h4>
                 <select class="form-select" aria-label="Default select example" id="select-menu2">
                     <option value="0" selected>- Qualquer -</option>
                 </select>
 
                 <hr>
 
-                <h4>Ativo</h4>
+                <h4>Grupo</h4>
                 <select class="form-select" aria-label="Default select example" id="select-menu3">
                     <option value="0" selected>- Qualquer -</option>
                 </select>
@@ -58,23 +58,22 @@
             <!-- Main content -->
             <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
 
-                <!-- Extrato -->
-                <h1 class="page-header">Extrato</h1>
+                <!-- Ativos -->
+                <h1 class="page-header">Ativos</h1>
                 <div class="table-responsive table-fix-head" style="max-height: 70vh;">
                     <table class="table table-striped">
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th>Data</th>
-                                <th>Instituição</th>
-                                <th>Evento</th>
                                 <th>Ativo</th>
-                                <th>Quantidade</th>
-                                <th>Valor</th>
-                                <th>Taxas</th>
+                                <th>Descrição</th>
+                                <th>Local</th>
+                                <th>Classe</th>
+                                <th>Grupo</th>
+                                <th>Vencimento</th>
                             </tr>
                         </thead>
-                        <tbody id="statement-table-body">
+                        <tbody id="asset-table-body">
                         </tbody>
                     </table>
                 </div>
@@ -89,6 +88,6 @@
     <!-- Bootstrap -->
     <script src="assets/js/bootstrap.min.js"></script>
 
-    <script src="assets/js/statement.js"></script>
+    <script src="assets/js/assets.js"></script>
 </body>
 </html>
