@@ -603,6 +603,7 @@ function updateTabCriptoSectionHistory(dateRange, overallCripto){
         html += `<td${style}>${new Intl.NumberFormat('pt', {style: 'currency', currency: 'BRL'}).format(Return)} (${percentFormat.format(returnPtc)})</td></tr>`
         table.insertAdjacentHTML('beforeend', html)
     }
+    return allTypes
 }
 
 function updateTabCriptoSectionCurrent(currentDate, wallet){
@@ -712,6 +713,13 @@ function clearTabCriptoSectionCurrent(){
     document.getElementById('chart-cripto2-wrapper').innerHTML = '<canvas id="chart-cripto2" width="40" height="40"></canvas>'
 }
 
+function clearTabCriptoSectionType(){
+    document.getElementById('cripto-select-type').innerHTML = '<option value="0" selected>- Grupos -</option>'
+    document.getElementById('cripto-type-table-body').innerText = ''
+    document.getElementById('chart-cripto3').remove()
+    document.getElementById('chart-cripto3-wrapper').innerHTML = '<canvas id="chart-cripto3" width="40" height="40"></canvas>'
+}
+
 // ------------------------------------------------------------------------- //
 // Filters
 // ------------------------------------------------------------------------- //
@@ -759,6 +767,7 @@ document.getElementById('btn-apply-filters').onclick = function(){
         filteredWalletHistory = filterMarketAndClass(filteredWalletHistory)
         let pw = parseWallet(filteredWalletHistory)
         currentVariableIncome = pw.currentVariableIncome
+        currentCripto = pw.currentCripto
         clearTabOverviewSectionHistory()
         updateTabOverviewSectionHistory(pw.dateRange, pw.overallValues)
         clearTabOverviewSectionCurrent()
@@ -777,9 +786,11 @@ document.getElementById('btn-apply-filters').onclick = function(){
         }
         clearTabCriptoSectionHistory()
         clearTabCriptoSectionCurrent()
+        clearTabCriptoSectionType()
         if(pw.classesList.includes('Cripto')){
-            updateTabCriptoSectionHistory(pw.dateRange, pw.overallCripto)
+            var allCriptoTypes = updateTabCriptoSectionHistory(pw.dateRange, pw.overallCripto)
             updateTabCriptoSectionCurrent(pw.dateRange[1], pw.currentCripto)
+            populateDropDown(allCriptoTypes, 'cripto-select-type')
         }
     }
 }
@@ -873,10 +884,8 @@ document.getElementById('var-income-select-type').addEventListener('change', fun
         // Plot
         var [dataset, labels] = sortLabeledData(dataset, labels)
         var data = {
-            // labels: ['a', 'b'],
             labels: labels,
             datasets: [{
-                // data: [1, 2],
                 data: dataset,
                 backgroundColor: faceColors[0],
                 borderWidth: 0,
@@ -887,11 +896,67 @@ document.getElementById('var-income-select-type').addEventListener('change', fun
     }
 })
 
+document.getElementById('cripto-select-type').addEventListener('change', function(){
+    let table = document.getElementById('cripto-type-table-body')
+    table.innerText = ''
+    document.getElementById('chart-cripto3').remove()
+    document.getElementById('chart-cripto3-wrapper').innerHTML = '<canvas id="chart-cripto3" width="40" height="40"></canvas>'
+
+    var selectedType = this.value
+    var filteredCripto = []
+    if(selectedType != '0'){
+        for(i in currentCripto){
+            if(currentCripto[i].type == selectedType){
+                filteredCripto.push(currentCripto[i])
+            }
+        }
+
+        // Plot
+        var labels = []
+        var dataset = []
+
+        // Table
+        for(i in filteredCripto){
+            var html = `<tr><td>${Number(i)+1}</td>`
+            var assetName = filteredCripto[i].asset_name
+            html += `<td>${assetName}</td>`
+            var quantity = filteredCripto[i].quantity
+            html += `<td>${quantity}</td>`
+            var currency = filteredCripto[i].currency
+            var cost = filteredCripto[i].cost
+            html += `<td>${new Intl.NumberFormat('pt', {style: 'currency', currency: currency}).format(cost)}</td>`
+            var value = filteredCripto[i].value
+            html += `<td>${new Intl.NumberFormat('pt', {style: 'currency', currency: currency}).format(value)}</td>`
+            var gain = value-cost
+            var gainPtc = gain/cost
+            var style = (gain > 0) ? ' style="color: green;"' : (gain < 0) ? ' style="color: red;"' : ''
+            html += `<td${style}>${new Intl.NumberFormat('pt', {style: 'currency', currency: currency}).format(gain)} (${percentFormat.format(gainPtc)})</td></tr>`
+            table.insertAdjacentHTML('beforeend', html)
+            labels.push(assetName)
+            dataset.push(value)
+        }
+
+        // Plot
+        var [dataset, labels] = sortLabeledData(dataset, labels)
+        var data = {
+            labels: labels,
+            datasets: [{
+                data: dataset,
+                backgroundColor: faceColors[0],
+                borderWidth: 0,
+            }]
+        }
+        var ctx = document.getElementById('chart-cripto3').getContext('2d')
+        plot(data, ctx, title='Valor atual', xlabel=undefined, ylabel=currency, type='bar')
+    }
+})
+
 // ------------------------------------------------------------------------- //
 // Initial definitions and parameters
 // ------------------------------------------------------------------------- //
 let walletHistory = undefined
 let currentVariableIncome = undefined
+let currentCripto = undefined
 let now = new Date()
 let startDate = new Date(now.getFullYear()-1, now.getMonth(), now.getDate())
 let timeFilter = {
@@ -908,6 +973,7 @@ function firstRequestCallback(response) {
     }
     let pw = parseWallet(walletHistory)
     currentVariableIncome = pw.currentVariableIncome
+    currentCripto = pw.currentCripto
     populateFilterCheckboxes(pw.marketsList, pw.classesList)
     updateTabOverviewSectionHistory(pw.dateRange, pw.overallValues)
     updateTabOverviewSectionCurrent(pw.dateRange[1], pw.currentWallet)
@@ -915,13 +981,14 @@ function firstRequestCallback(response) {
         updateTabFixedIncomeSectionCurrent(pw.dateRange[1], pw.currentFixedIncome)
     }
     if(pw.classesList.includes('RV')){
-        var allTypes = updateTabVariableIncomeSectionHistory(pw.dateRange, pw.overallVariableIncome)
+        var allVITypes = updateTabVariableIncomeSectionHistory(pw.dateRange, pw.overallVariableIncome)
         updateTabVariableIncomeSectionCurrent(pw.dateRange[1], pw.currentVariableIncome)
-        populateDropDown(allTypes, 'var-income-select-type')
+        populateDropDown(allVITypes, 'var-income-select-type')
     }
     if(pw.classesList.includes('Cripto')){
-        updateTabCriptoSectionHistory(pw.dateRange, pw.overallCripto)
+        var allCriptoTypes = updateTabCriptoSectionHistory(pw.dateRange, pw.overallCripto)
         updateTabCriptoSectionCurrent(pw.dateRange[1], pw.currentCripto)
+        populateDropDown(allCriptoTypes, 'cripto-select-type')
     }
 }
 
@@ -935,6 +1002,7 @@ function inclusiveWalletCallback(response) {
     filteredWalletHistory = filterMarketAndClass(walletHistory)
     let pw = parseWallet(filteredWalletHistory)
     currentVariableIncome = pw.currentVariableIncome
+    currentCripto = pw.currentCripto
     clearTabOverviewSectionHistory()
     updateTabOverviewSectionHistory(pw.dateRange, pw.overallValues)
     clearTabOverviewSectionCurrent()
@@ -953,9 +1021,11 @@ function inclusiveWalletCallback(response) {
     }
     clearTabCriptoSectionHistory()
     clearTabCriptoSectionCurrent()
+    clearTabCriptoSectionType()
     if(pw.classesList.includes('Cripto')){
-        updateTabCriptoSectionHistory(pw.dateRange, pw.overallCripto)
+        var allCriptoTypes = updateTabCriptoSectionHistory(pw.dateRange, pw.overallCripto)
         updateTabCriptoSectionCurrent(pw.dateRange[1], pw.currentCripto)
+        populateDropDown(allCriptoTypes, 'cripto-select-type')
     }
 }
 
