@@ -76,9 +76,9 @@
                 <!-- Nav tabs -->
                 <div>
                     <ul class="nav nav-tabs" role="tablist">
-                        <li role="presentation" class="active"><a href="#home" aria-controls="home" role="tab" data-toggle="tab">Visão geral</a></li>
+                        <li role="presentation"><a href="#home" aria-controls="home" role="tab" data-toggle="tab">Visão geral</a></li>
                         <li role="presentation"><a href="#fixed-income" aria-controls="fixed-income" role="tab" data-toggle="tab">Renda fixa</a></li>
-                        <li role="presentation"><a href="#variable-income" aria-controls="variable-income" role="tab" data-toggle="tab">Renda variável</a></li>
+                        <li role="presentation" class="active"><a href="#variable-income" aria-controls="variable-income" role="tab" data-toggle="tab">Renda variável</a></li>
                         <li role="presentation"><a href="#cripto" aria-controls="cripto" role="tab" data-toggle="tab">Cripto</a></li>
                     </ul>
                 </div>
@@ -86,7 +86,7 @@
                 <!-- Tab panes -->
                 <div class="tab-content">
                     <!-- Visão geral -->
-                    <div role="tabpanel" class="tab-pane active" id="home">
+                    <div role="tabpanel" class="tab-pane" id="home">
                         <!-- Histórico -->
                         <h2 class="sub-header">Histórico</h2>
                         <span id="return" class="text-muted"></span>
@@ -178,7 +178,7 @@
                     </div>
 
                     <!-- Renda variável -->
-                    <div role="tabpanel" class="tab-pane" id="variable-income">
+                    <div role="tabpanel" class="tab-pane active" id="variable-income">
 
                         <!-- Histórico -->
                         <h2 class="sub-header">Histórico</h2>
@@ -238,8 +238,38 @@
                             </div>
                         </div>
 
-                        <!--  -->
-                        <h2 class="sub-header">---</h2>
+                        <!-- Composição do grupo -->
+                        <h2 class="sub-header">Composição do grupo</h2>
+
+                        <select id="var-income-select-type" class="form-select">
+                            <option value="0" selected>- Grupos -</option>
+                        </select>
+
+                        <div class="container-fluid">
+                            <div class="row">
+
+                                <div class="col-md-5" id="chart-variable3-wrapper">
+                                    <canvas id="chart-variable3" width="40" height="40"></canvas>
+                                </div>
+
+                                <div class="col-md-6 table-responsive table-fix-head" style="max-height: 400px;">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Ativo</th>
+                                                <th>Quant</th>
+                                                <th>Custo</th>
+                                                <th>Valor</th>
+                                                <th>Ganho</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="variable-type-table-body"></tbody>
+                                    </table>
+                                </div>
+
+                            </div>
+                        </div>
 
                     </div>
 

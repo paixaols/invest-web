@@ -474,6 +474,7 @@ function updateTabVariableIncomeSectionHistory(dateRange, overallVariableIncome)
         html += `<td${style}>${new Intl.NumberFormat('pt', {style: 'currency', currency: 'BRL'}).format(Return)} (${percentFormat.format(returnPtc)})</td></tr>`
         table.insertAdjacentHTML('beforeend', html)
     }
+    return allTypes
 }
 
 function updateTabVariableIncomeSectionCurrent(currentDate, wallet){
@@ -690,6 +691,13 @@ function clearTabVariableIncomeSectionCurrent(){
     document.getElementById('chart-variable2-wrapper').innerHTML = '<canvas id="chart-variable2" width="40" height="40"></canvas>'
 }
 
+function clearTabVariableIncomeSectionType(){
+    document.getElementById('var-income-select-type').innerHTML = '<option value="0" selected>- Grupos -</option>'
+    document.getElementById('variable-type-table-body').innerText = ''
+    document.getElementById('chart-variable3').remove()
+    document.getElementById('chart-variable3-wrapper').innerHTML = '<canvas id="chart-variable3" width="40" height="40"></canvas>'
+}
+
 function clearTabCriptoSectionHistory(){
     document.getElementById('return-cripto-tab').innerText = ''
     document.getElementById('cripto-history-table-body').innerText = ''
@@ -750,6 +758,7 @@ document.getElementById('btn-apply-filters').onclick = function(){
         }
         filteredWalletHistory = filterMarketAndClass(filteredWalletHistory)
         let pw = parseWallet(filteredWalletHistory)
+        currentVariableIncome = pw.currentVariableIncome
         clearTabOverviewSectionHistory()
         updateTabOverviewSectionHistory(pw.dateRange, pw.overallValues)
         clearTabOverviewSectionCurrent()
@@ -760,9 +769,11 @@ document.getElementById('btn-apply-filters').onclick = function(){
         }
         clearTabVariableIncomeSectionHistory()
         clearTabVariableIncomeSectionCurrent()
+        clearTabVariableIncomeSectionType()
         if(pw.classesList.includes('RV')){
-            updateTabVariableIncomeSectionHistory(pw.dateRange, pw.overallVariableIncome)
+            var allTypes = updateTabVariableIncomeSectionHistory(pw.dateRange, pw.overallVariableIncome)
             updateTabVariableIncomeSectionCurrent(pw.dateRange[1], pw.currentVariableIncome)
+            populateDropDown(allTypes, 'var-income-select-type')
         }
         clearTabCriptoSectionHistory()
         clearTabCriptoSectionCurrent()
@@ -808,10 +819,79 @@ function filterMarketAndClass(walletToFilter) {
     return filteredWallet
 }
 
+function populateDropDown(itemsList, elementID) {
+    itemsList = itemsList.filter(item => item !== 'Total')
+    itemsList.sort()
+
+    let element = document.getElementById(elementID)
+    for(i in itemsList){
+        var html = `<option value=${itemsList[i]}>${itemsList[i]}</option>`
+        element.insertAdjacentHTML('beforeend', html)
+    }
+}
+
+document.getElementById('var-income-select-type').addEventListener('change', function(){
+    let table = document.getElementById('variable-type-table-body')
+    table.innerText = ''
+    document.getElementById('chart-variable3').remove()
+    document.getElementById('chart-variable3-wrapper').innerHTML = '<canvas id="chart-variable3" width="40" height="40"></canvas>'
+
+    var selectedType = this.value
+    var filteredVarIinc = []
+    if(selectedType != '0'){
+        for(i in currentVariableIncome){
+            if(currentVariableIncome[i].type == selectedType){
+                filteredVarIinc.push(currentVariableIncome[i])
+            }
+        }
+
+        // Plot
+        var labels = []
+        var dataset = []
+
+        // Table
+        for(i in filteredVarIinc){
+            var html = `<tr><td>${Number(i)+1}</td>`
+            var assetName = filteredVarIinc[i].asset_name
+            html += `<td>${assetName}</td>`
+            var quantity = filteredVarIinc[i].quantity
+            html += `<td>${quantity}</td>`
+            var currency = filteredVarIinc[i].currency
+            var cost = filteredVarIinc[i].cost
+            html += `<td>${new Intl.NumberFormat('pt', {style: 'currency', currency: currency}).format(cost)}</td>`
+            var value = filteredVarIinc[i].value
+            html += `<td>${new Intl.NumberFormat('pt', {style: 'currency', currency: currency}).format(value)}</td>`
+            var gain = value-cost
+            var gainPtc = gain/cost
+            var style = (gain > 0) ? ' style="color: green;"' : (gain < 0) ? ' style="color: red;"' : ''
+            html += `<td${style}>${new Intl.NumberFormat('pt', {style: 'currency', currency: currency}).format(gain)} (${percentFormat.format(gainPtc)})</td></tr>`
+            table.insertAdjacentHTML('beforeend', html)
+            labels.push(assetName)
+            dataset.push(value)
+        }
+
+        // Plot
+        var [dataset, labels] = sortLabeledData(dataset, labels)
+        var data = {
+            // labels: ['a', 'b'],
+            labels: labels,
+            datasets: [{
+                // data: [1, 2],
+                data: dataset,
+                backgroundColor: faceColors[0],
+                borderWidth: 0,
+            }]
+        }
+        var ctx = document.getElementById('chart-variable3').getContext('2d')
+        plot(data, ctx, title='Valor atual', xlabel=undefined, ylabel=currency, type='bar')
+    }
+})
+
 // ------------------------------------------------------------------------- //
 // Initial definitions and parameters
 // ------------------------------------------------------------------------- //
 let walletHistory = undefined
+let currentVariableIncome = undefined
 let now = new Date()
 let startDate = new Date(now.getFullYear()-1, now.getMonth(), now.getDate())
 let timeFilter = {
@@ -827,6 +907,7 @@ function firstRequestCallback(response) {
         }
     }
     let pw = parseWallet(walletHistory)
+    currentVariableIncome = pw.currentVariableIncome
     populateFilterCheckboxes(pw.marketsList, pw.classesList)
     updateTabOverviewSectionHistory(pw.dateRange, pw.overallValues)
     updateTabOverviewSectionCurrent(pw.dateRange[1], pw.currentWallet)
@@ -834,8 +915,9 @@ function firstRequestCallback(response) {
         updateTabFixedIncomeSectionCurrent(pw.dateRange[1], pw.currentFixedIncome)
     }
     if(pw.classesList.includes('RV')){
-        updateTabVariableIncomeSectionHistory(pw.dateRange, pw.overallVariableIncome)
+        var allTypes = updateTabVariableIncomeSectionHistory(pw.dateRange, pw.overallVariableIncome)
         updateTabVariableIncomeSectionCurrent(pw.dateRange[1], pw.currentVariableIncome)
+        populateDropDown(allTypes, 'var-income-select-type')
     }
     if(pw.classesList.includes('Cripto')){
         updateTabCriptoSectionHistory(pw.dateRange, pw.overallCripto)
@@ -852,6 +934,7 @@ function inclusiveWalletCallback(response) {
     }
     filteredWalletHistory = filterMarketAndClass(walletHistory)
     let pw = parseWallet(filteredWalletHistory)
+    currentVariableIncome = pw.currentVariableIncome
     clearTabOverviewSectionHistory()
     updateTabOverviewSectionHistory(pw.dateRange, pw.overallValues)
     clearTabOverviewSectionCurrent()
@@ -862,9 +945,11 @@ function inclusiveWalletCallback(response) {
     }
     clearTabVariableIncomeSectionHistory()
     clearTabVariableIncomeSectionCurrent()
+    clearTabVariableIncomeSectionType()
     if(pw.classesList.includes('RV')){
-        updateTabVariableIncomeSectionHistory(pw.dateRange, pw.overallVariableIncome)
+        var allTypes = updateTabVariableIncomeSectionHistory(pw.dateRange, pw.overallVariableIncome)
         updateTabVariableIncomeSectionCurrent(pw.dateRange[1], pw.currentVariableIncome)
+        populateDropDown(allTypes, 'var-income-select-type')
     }
     clearTabCriptoSectionHistory()
     clearTabCriptoSectionCurrent()
