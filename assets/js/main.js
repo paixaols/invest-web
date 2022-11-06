@@ -241,6 +241,15 @@ function updateTabOverviewSectionHistory(dateRange, overallValues) {
     plot(data, ctx, title='Composição da carteira', xlabel=undefined, ylabel='%', type='bar', scale=[0, 100])
 }
 
+function updateTabFixedIncomeSectionHistory(currentWallet){
+    let allTypes = []
+    for(i in currentWallet){
+        var type = currentWallet[i].type
+        if(!allTypes.includes(type)) allTypes.push(type)
+    }
+    return allTypes
+}
+
 function updateTabOverviewSectionCurrent(currentDate, currentWallet) {
     // Current wallet
     var currentValueByMarket = {}
@@ -678,6 +687,13 @@ function clearTabFixedIncomeSectionCurrent(){
     document.getElementById('chart-fixed3-wrapper').innerHTML = '<canvas id="chart-fixed3" width="40" height="20"></canvas>'
 }
 
+function clearTabFixedIncomeSectionType(){
+    document.getElementById('fixed-income-select-type').innerHTML = '<option value="0" selected>- Grupos -</option>'
+    document.getElementById('fixed-income-type-table-body').innerText = ''
+    document.getElementById('chart-fixed4').remove()
+    document.getElementById('chart-fixed4-wrapper').innerHTML = '<canvas id="chart-fixed4" width="40" height="40"></canvas>'
+}
+
 function clearTabVariableIncomeSectionHistory(){
     document.getElementById('return-variableincome-tab').innerText = ''
     document.getElementById('variable-history-table-body').innerText = ''
@@ -766,6 +782,7 @@ document.getElementById('btn-apply-filters').onclick = function(){
         }
         filteredWalletHistory = filterMarketAndClass(filteredWalletHistory)
         let pw = parseWallet(filteredWalletHistory)
+        currentFixedIncome = pw.currentFixedIncome
         currentVariableIncome = pw.currentVariableIncome
         currentCripto = pw.currentCripto
         clearTabOverviewSectionHistory()
@@ -773,8 +790,11 @@ document.getElementById('btn-apply-filters').onclick = function(){
         clearTabOverviewSectionCurrent()
         updateTabOverviewSectionCurrent(pw.dateRange[1], pw.currentWallet)
         clearTabFixedIncomeSectionCurrent()
+        clearTabFixedIncomeSectionType()
         if(pw.classesList.includes('RF')){
+            var allFITypes = updateTabFixedIncomeSectionHistory(pw.currentFixedIncome)
             updateTabFixedIncomeSectionCurrent(pw.dateRange[1], pw.currentFixedIncome)
+            populateDropDown(allFITypes, 'fixed-income-select-type')
         }
         clearTabVariableIncomeSectionHistory()
         clearTabVariableIncomeSectionCurrent()
@@ -840,6 +860,61 @@ function populateDropDown(itemsList, elementID) {
         element.insertAdjacentHTML('beforeend', html)
     }
 }
+
+document.getElementById('fixed-income-select-type').addEventListener('change', function(){
+    let table = document.getElementById('fixed-income-type-table-body')
+    table.innerText = ''
+    document.getElementById('chart-fixed4').remove()
+    document.getElementById('chart-fixed4-wrapper').innerHTML = '<canvas id="chart-fixed4" width="40" height="40"></canvas>'
+
+    var selectedType = this.value
+    var filteredFixedIinc = []
+    if(selectedType != '0'){
+        for(i in currentFixedIncome){
+            if(currentFixedIncome[i].type == selectedType){
+                filteredFixedIinc.push(currentFixedIncome[i])
+            }
+        }
+
+        // Plot
+        var labels = []
+        var dataset = []
+
+        // Table
+        for(i in filteredFixedIinc){
+            var html = `<tr><td>${Number(i)+1}</td>`
+            var assetName = filteredFixedIinc[i].asset_name
+            html += `<td>${assetName}</td>`
+            var quantity = filteredFixedIinc[i].quantity
+            html += `<td>${quantity}</td>`
+            var currency = filteredFixedIinc[i].currency
+            var cost = filteredFixedIinc[i].cost
+            html += `<td>${new Intl.NumberFormat('pt', {style: 'currency', currency: currency}).format(cost)}</td>`
+            var value = filteredFixedIinc[i].value
+            html += `<td>${new Intl.NumberFormat('pt', {style: 'currency', currency: currency}).format(value)}</td>`
+            var gain = value-cost
+            var gainPtc = gain/cost
+            var style = (gain > 0) ? ' style="color: green;"' : (gain < 0) ? ' style="color: red;"' : ''
+            html += `<td${style}>${new Intl.NumberFormat('pt', {style: 'currency', currency: currency}).format(gain)} (${percentFormat.format(gainPtc)})</td></tr>`
+            table.insertAdjacentHTML('beforeend', html)
+            labels.push(assetName)
+            dataset.push(value)
+        }
+
+        // Plot
+        var [dataset, labels] = sortLabeledData(dataset, labels)
+        var data = {
+            labels: labels,
+            datasets: [{
+                data: dataset,
+                backgroundColor: faceColors[0],
+                borderWidth: 0,
+            }]
+        }
+        var ctx = document.getElementById('chart-fixed4').getContext('2d')
+        plot(data, ctx, title='Valor atual', xlabel=undefined, ylabel=currency, type='bar')
+    }
+})
 
 document.getElementById('var-income-select-type').addEventListener('change', function(){
     let table = document.getElementById('variable-type-table-body')
@@ -955,6 +1030,7 @@ document.getElementById('cripto-select-type').addEventListener('change', functio
 // Initial definitions and parameters
 // ------------------------------------------------------------------------- //
 let walletHistory = undefined
+let currentFixedIncome = undefined
 let currentVariableIncome = undefined
 let currentCripto = undefined
 let now = new Date()
@@ -972,13 +1048,16 @@ function firstRequestCallback(response) {
         }
     }
     let pw = parseWallet(walletHistory)
+    currentFixedIncome = pw.currentFixedIncome
     currentVariableIncome = pw.currentVariableIncome
     currentCripto = pw.currentCripto
     populateFilterCheckboxes(pw.marketsList, pw.classesList)
     updateTabOverviewSectionHistory(pw.dateRange, pw.overallValues)
     updateTabOverviewSectionCurrent(pw.dateRange[1], pw.currentWallet)
     if(pw.classesList.includes('RF')){
+        var allFITypes = updateTabFixedIncomeSectionHistory(pw.currentFixedIncome)
         updateTabFixedIncomeSectionCurrent(pw.dateRange[1], pw.currentFixedIncome)
+        populateDropDown(allFITypes, 'fixed-income-select-type')
     }
     if(pw.classesList.includes('RV')){
         var allVITypes = updateTabVariableIncomeSectionHistory(pw.dateRange, pw.overallVariableIncome)
@@ -1001,6 +1080,7 @@ function inclusiveWalletCallback(response) {
     }
     filteredWalletHistory = filterMarketAndClass(walletHistory)
     let pw = parseWallet(filteredWalletHistory)
+    currentFixedIncome = pw.currentFixedIncome
     currentVariableIncome = pw.currentVariableIncome
     currentCripto = pw.currentCripto
     clearTabOverviewSectionHistory()
@@ -1008,8 +1088,11 @@ function inclusiveWalletCallback(response) {
     clearTabOverviewSectionCurrent()
     updateTabOverviewSectionCurrent(pw.dateRange[1], pw.currentWallet)
     clearTabFixedIncomeSectionCurrent()
+    clearTabFixedIncomeSectionType()
     if(pw.classesList.includes('RF')){
+        var allFITypes = updateTabFixedIncomeSectionHistory(pw.currentFixedIncome)
         updateTabFixedIncomeSectionCurrent(pw.dateRange[1], pw.currentFixedIncome)
+        populateDropDown(allFITypes, 'fixed-income-select-type')
     }
     clearTabVariableIncomeSectionHistory()
     clearTabVariableIncomeSectionCurrent()

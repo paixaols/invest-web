@@ -76,17 +76,17 @@
                 <!-- Nav tabs -->
                 <div>
                     <ul class="nav nav-tabs" role="tablist">
-                        <li role="presentation"><a href="#home" aria-controls="home" role="tab" data-toggle="tab">Visão geral</a></li>
+                        <li role="presentation" class="active"><a href="#home" aria-controls="home" role="tab" data-toggle="tab">Visão geral</a></li>
                         <li role="presentation"><a href="#fixed-income" aria-controls="fixed-income" role="tab" data-toggle="tab">Renda fixa</a></li>
                         <li role="presentation"><a href="#variable-income" aria-controls="variable-income" role="tab" data-toggle="tab">Renda variável</a></li>
-                        <li role="presentation" class="active"><a href="#cripto" aria-controls="cripto" role="tab" data-toggle="tab">Cripto</a></li>
+                        <li role="presentation"><a href="#cripto" aria-controls="cripto" role="tab" data-toggle="tab">Cripto</a></li>
                     </ul>
                 </div>
 
                 <!-- Tab panes -->
                 <div class="tab-content">
                     <!-- Visão geral -->
-                    <div role="tabpanel" class="tab-pane" id="home">
+                    <div role="tabpanel" class="tab-pane active" id="home">
                         <!-- Histórico -->
                         <h2 class="sub-header">Histórico</h2>
                         <span id="return" class="text-muted"></span>
@@ -137,6 +137,7 @@
 
                     <!-- Renda fixa -->
                     <div role="tabpanel" class="tab-pane" id="fixed-income">
+
                         <!-- Carteira atual -->
                         <h2 class="sub-header">Carteira atual</h2>
                         <span id="current-date-fixedincome-tab" class="text-muted"></span>
@@ -175,6 +176,40 @@
 
                             </div>
                         </div>
+
+                        <!-- Composição dos grupos -->
+                        <h2 class="sub-header">Composição dos grupos</h2>
+
+                        <select id="fixed-income-select-type" class="form-select">
+                            <option value="0" selected>- Grupos -</option>
+                        </select>
+
+                        <div class="container-fluid">
+                            <div class="row">
+
+                                <div class="col-md-5" id="chart-fixed4-wrapper">
+                                    <canvas id="chart-fixed4" width="40" height="40"></canvas>
+                                </div>
+
+                                <div class="col-md-6 table-responsive table-fix-head" style="max-height: 400px;">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Ativo</th>
+                                                <th>Quant</th>
+                                                <th>Custo</th>
+                                                <th>Valor</th>
+                                                <th>Ganho</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="fixed-income-type-table-body"></tbody>
+                                    </table>
+                                </div>
+
+                            </div>
+                        </div>
+
                     </div>
 
                     <!-- Renda variável -->
@@ -238,7 +273,7 @@
                             </div>
                         </div>
 
-                        <!-- Composição do grupo -->
+                        <!-- Composição dos grupos -->
                         <h2 class="sub-header">Composição dos grupos</h2>
 
                         <select id="var-income-select-type" class="form-select">
@@ -274,7 +309,7 @@
                     </div>
 
                     <!-- Cripto -->
-                    <div role="tabpanel" class="tab-pane active" id="cripto">
+                    <div role="tabpanel" class="tab-pane" id="cripto">
 
                         <!-- Histórico -->
                         <h2 class="sub-header">Histórico</h2>
@@ -334,7 +369,7 @@
                             </div>
                         </div>
 
-                        <!-- Composição do grupo -->
+                        <!-- Composição dos grupos -->
                         <h2 class="sub-header">Composição dos grupos</h2>
 
                         <select id="cripto-select-type" class="form-select">
