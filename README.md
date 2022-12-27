@@ -1,1 +1,3 @@
 # invest-web
+
+Deprecated repository
